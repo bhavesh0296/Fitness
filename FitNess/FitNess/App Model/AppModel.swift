@@ -41,4 +41,9 @@ class AppModel {
     }
     appState = .inProgress
   }
+
+  func restart() {
+    AppModel.instance.dataModel.goal = nil
+    appState = .notStarted
+  }
 }

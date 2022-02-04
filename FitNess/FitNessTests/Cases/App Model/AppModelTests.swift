@@ -42,6 +42,11 @@ class AppModelTests: XCTestCase {
     sut.dataModel.goal = 1000
   }
 
+  func givenInProgress() {
+    givenGoalSet()
+    try! sut.start()
+  }
+
   override func tearDown() {
     sut = nil
     super.tearDown()
@@ -83,5 +88,16 @@ class AppModelTests: XCTestCase {
     // then it is in inProgress
     let newState = sut.appState
     XCTAssertEqual(newState, AppState.inProgress)
+  }
+
+  func testAppModel_whenRestart_isInNotStartedState() {
+    // given
+    givenInProgress()
+
+    // when
+    sut.restart()
+
+    // then
+    XCTAssertEqual(sut.appState, .notStarted)
   }
 }

@@ -37,7 +37,10 @@ class StepCountControllerTests: XCTestCase {
 
   override func setUp() {
     super.setUp()
-    sut = StepCountController()
+//    sut = StepCountController()
+    let rootController = loadRootViewController()
+    sut = rootController.stepController
+    
   }
 
   func givenGoalSet() {
@@ -45,11 +48,20 @@ class StepCountControllerTests: XCTestCase {
   }
 
   override func tearDown() {
-    sut = nil
+//    sut = nil
+//    AppModel.instance.dataModel.goal = nil
+
+    AppModel.instance.dataModel.goal = nil
+    AppModel.instance.restart()
+    sut.updateUI()
     super.tearDown()
   }
 
   // MARK: - Given
+  func giveInProgress() {
+    givenGoalSet()
+    sut.startStopPause(nil)
+  }
   
   // MARK: - When
 
@@ -62,7 +74,7 @@ class StepCountControllerTests: XCTestCase {
   func testController_whenCreated_buttonLabelIsStart() {
     // given
     givenGoalSet()
-    sut.viewDidLoad()
+//    sut.viewDidLoad()
 
     let text = sut.startButton.title(for: .normal)
     XCTAssertEqual(text, AppState.notStarted.nextStateButtonLabel)
@@ -74,8 +86,8 @@ class StepCountControllerTests: XCTestCase {
   // MARK: - In Progress
 
   func testController_whenStartTapped_appIsInProgress() {
+    givenGoalSet()
     whenStartStopPauseCalled()
-//    givenGoalSet()
 
     // then
     let state = AppModel.instance.appState
@@ -83,13 +95,43 @@ class StepCountControllerTests: XCTestCase {
   }
 
   func testController_whenStartTapped_buttonLabelIsPause() {
+    givenGoalSet()
     whenStartStopPauseCalled()
-//    givenGoalSet()
 
     // then
     let text = sut.startButton.title(for: .normal)
     XCTAssertEqual(text, AppState.inProgress.nextStateButtonLabel)
   }
 
+  func testDataModel_whenGoalUpdate_updatesToNewGoal() {
+    // when
+    sut.updateGoal(newGoal: 50)
+
+    // then
+    XCTAssertEqual(AppModel.instance.dataModel.goal, 50)
+  }
+
+
+
   // MARK: - Chase View
+  func testChaseView_whenLoaded_isNoStarted() {
+
+    // when loaded, then
+    let chaseView = sut.chaseView
+    XCTAssertEqual(chaseView?.state, AppState.notStarted)
+  }
+
+  func testChaseView_whenInProgress_viewIsInProgress() {
+    // given
+    giveInProgress()
+
+    // then
+    let chaseView = sut.chaseView
+    XCTAssertEqual(chaseView?.state, AppState.inProgress)
+  }
+
+//  func testController_whenPausePressed_moveBack() {
+//
+//  }
+
 }
