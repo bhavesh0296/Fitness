@@ -39,7 +39,10 @@ class DataModelTests: XCTestCase {
   }
 
   override func tearDown() {
+    sut.sendAlerts.removeAll()
     sut = nil
+    AlertCenter.instance.clearAlerts()
+
     super.tearDown()
   }
 
@@ -49,6 +52,25 @@ class DataModelTests: XCTestCase {
     sut.distance = 10
     sut.steps = 100
     sut.nessie.distance = 50
+  }
+
+  func givenExpectationForNotification(alert: Alert) -> XCTestExpectation {
+//    let exp = expectation(forNotification: AlertNotification.name,
+//                          object: nil) { notification -> Bool in
+//      return notification.alert == alert
+//    }
+//    return exp
+
+    let exp = XCTNSNotificationExpectation(name: AlertNotification.name,
+                                           object: nil,
+                                           notificationCenter: AlertCenter.instance.notificationCenter)
+
+    exp.handler = { notification -> Bool in
+      return notification.alert == alert
+    }
+    exp.expectedFulfillmentCount = 1
+    exp.assertForOverFulfill = true
+    return exp
   }
 
   // MARK: - Lifecycle
@@ -148,4 +170,115 @@ class DataModelTests: XCTestCase {
     // then
     XCTAssertTrue(sut.caught)
   }
+
+  func testWhenStepsHit25Percent_milestoneNotificationGenerated() {
+    // given
+    sut.goal = 400
+//    let exp = expectation(forNotification: AlertNotification.name,
+//                          object: AlertCenter.instance) { notification -> Bool in
+//      return notification.alert == Alert.milestone25Percent
+//    }
+
+    let exp = givenExpectationForNotification(alert: .milestone25Percent)
+
+    // when
+    sut.steps = 100
+
+    // then
+    wait(for: [exp], timeout: 1)
+  }
+
+  func testWhenStepsHit50Percent_milestoneNotificationGenerated() {
+    // given
+    sut.goal = 400
+//    let exp = expectation(forNotification: AlertNotification.name,
+//                          object: nil) { notification -> Bool in
+//      return notification.alert == Alert.milestone50Percent
+//    }
+
+    let exp = givenExpectationForNotification(alert: .milestone50Percent)
+
+    // when
+    sut.steps = 200
+
+    // then
+    wait(for: [exp], timeout: 1)
+  }
+
+  func testWhenStespHit75Percent_milestoneNotificationGenerated() {
+    // given
+    sut.goal = 400
+//    let exp = expectation(forNotification: AlertNotification.name,
+//                          object: nil) { notification in
+//      return notification.alert == Alert.milestone75Percent
+//    }
+    let exp = givenExpectationForNotification(alert: .milestone75Percent)
+
+    // when
+    sut.steps = 300
+
+    // then
+    wait(for: [exp], timeout: 1)
+  }
+
+  func testWhenGoalCompleted_milestoneNotificationGenerated() {
+    // given
+    sut.goal = 400
+    let exp = givenExpectationForNotification(alert: .goalComplete)
+
+    // when
+    sut.steps = 400
+
+    // then
+    wait(for: [exp], timeout: 1)
+  }
+
+  func testWhenGoalReached_allMilestonesNotificationSend() {
+    // given
+    sut.goal = 400
+    let expectations = [
+      givenExpectationForNotification(alert: .milestone25Percent),
+      givenExpectationForNotification(alert: .milestone50Percent),
+      givenExpectationForNotification(alert: .milestone75Percent),
+      givenExpectationForNotification(alert: .goalComplete)
+    ]
+
+    // when
+    sut.steps = 400
+
+    // then
+    wait(for: expectations, timeout: 1, enforceOrder: true)
+  }
+
+  func testWhenStepIsIncreased_onlyOneMilestoneNotificationSend() {
+    // given
+    sut.goal = 10
+    let expectations = [
+      givenExpectationForNotification(alert: .milestone25Percent),
+      givenExpectationForNotification(alert: .milestone50Percent),
+      givenExpectationForNotification(alert: .milestone75Percent),
+      givenExpectationForNotification(alert: .goalComplete)
+    ]
+
+    // clear out the alerts to simulate user interaction
+    let alertObserver = AlertCenter.instance.notificationCenter
+      .addObserver(forName: AlertNotification.name,
+                   object: nil, queue: .main) { notification in
+        if let alert = notification.alert {
+          AlertCenter.instance.clear(alert: alert)
+        }
+      }
+
+    // when
+    for steps in 1...10 {
+      self.sut.steps = steps
+      sleep(1)
+    }
+
+    // then
+    wait(for: expectations, timeout: 20, enforceOrder: true)
+    AlertCenter.instance.notificationCenter.removeObserver(alertObserver)
+  }
+
+  
 }

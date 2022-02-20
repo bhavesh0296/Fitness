@@ -39,7 +39,125 @@ class AlertCenterTests: XCTestCase {
   }
 
   override func tearDown() {
+    AlertCenter.instance.clearAlerts()
     sut = nil
     super.tearDown()
   }
+
+  func testWhenInitialized_alertCountIsZero() {
+    XCTAssertEqual(sut.alertCount, 0)
+  }
+
+  func testWhenAlertPosted_countIsIncreased() {
+    // given
+    let alert = Alert("An Alert")
+
+    // when
+    sut.postAlert(alert: alert)
+
+    // then
+    XCTAssertEqual(sut.alertCount, 1)
+  }
+
+  func testWhenCleared_countIsZero() {
+    // given
+    let alert = Alert("An Alert")
+    sut.postAlert(alert: alert)
+
+    // when
+    sut.clearAlerts()
+
+    XCTAssertEqual(sut.alertCount, 0)
+  }
+
+  func testPostOne_generatesANotification() {
+    // given
+    let exp = expectation(forNotification: AlertNotification.name,
+                          object: sut,
+                          handler: nil)
+    let alert = Alert("This is an Alert")
+
+    // when
+    sut.postAlert(alert: alert)
+
+    // then
+    wait(for: [exp], timeout: 1)
+  }
+
+  func testPostingTwoAlerts_generatesTwoNotification() {
+    // given
+    let exp1 = expectation(forNotification: AlertNotification.name,
+                           object: sut,
+                           handler: nil)
+
+    let exp2 = expectation(forNotification: AlertNotification.name,
+                           object: sut,
+                           handler: nil)
+    let alert1 = Alert("this is first alert")
+    let alert2 = Alert("this is second alert")
+
+    // when
+    sut.postAlert(alert: alert1)
+    sut.postAlert(alert: alert2)
+
+    wait(for: [exp1, exp2], timeout: 1)
+  }
+
+  func testPostDoubleAlert_generateOnlyOneNotification() {
+    // give
+    let exp = expectation(forNotification: AlertNotification.name,
+                          object: sut,
+                          handler: nil)
+
+    exp.expectedFulfillmentCount = 2
+    exp.isInverted = true
+    let alert = Alert("This is an Alert")
+
+    // when
+    sut.postAlert(alert: alert)
+    sut.postAlert(alert: alert)
+
+    wait(for: [exp], timeout: 1)
+  }
+
+  func testNotification_whenPosted_containsAlertObject() {
+    // given
+    let alert = Alert("test contents")
+    let exp = expectation(forNotification: AlertNotification.name,
+                          object: sut,
+                          handler: nil)
+
+    var postedAlert: Alert?
+
+    sut.notificationCenter.addObserver(forName: AlertNotification.name,
+                                       object: sut,
+                                       queue: nil) { notification in
+      let info = notification.userInfo
+      postedAlert = info?[AlertNotification.Keys.alert] as? Alert
+    }
+
+    // when
+    sut.postAlert(alert: alert)
+
+    // then
+    wait(for: [exp], timeout: 1.0)
+    XCTAssertNotNil(postedAlert, "should have send the alert")
+    XCTAssertEqual(alert, postedAlert, "should have send the original alert")
+  }
+
+
+
+  // MARK: - Clearing Individual Steps
+  func testWhenCleared_alertIsRemoved() {
+    // given
+    let alert = Alert("to be cleared")
+    sut.postAlert(alert: alert)
+
+    // when
+    sut.clear(alert: alert)
+
+    // then
+    XCTAssertEqual(sut.alertCount, 0)
+  }
+
 }

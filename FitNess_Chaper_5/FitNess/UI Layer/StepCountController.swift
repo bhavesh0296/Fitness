@@ -54,6 +54,11 @@ class StepCountController: UIViewController {
     super.viewDidLoad()
 
     updateUI()
+    AppModel.instance.stateChangedCallback = { model in
+      DispatchQueue.main.async {
+        self.updateUI()
+      }
+    }
   }
 
   func updateUI() {
@@ -75,13 +80,18 @@ class StepCountController: UIViewController {
     case .inProgress:
       AppModel.instance.pause()
     case .paused:
-      start() 
+      start()
     case .completed, .caught:
       AppModel.instance.restart()
     }
-    
+
     updateUI()
   }
+
+//  @IBAction func startStopPause(_ sender: Any?) {
+//    let alert = Alert("Test Alert")
+//    AlertCenter.instance.postAlert(alert: alert)
+//  }
 
   private func start() {
     do {

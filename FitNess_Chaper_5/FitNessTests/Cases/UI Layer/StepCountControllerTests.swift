@@ -76,6 +76,14 @@ class StepCountControllerTests: XCTestCase {
     sut.startStopPause(nil)
   }
 
+  fileprivate func whenCaught() {
+    AppModel.instance.setToCaught()
+  }
+
+  fileprivate func whenCompleted() {
+    AppModel.instance.setToComplete()
+  }
+
   // MARK: - Initial State
   func testController_whenCreated_buttonLabelIsStart() {
     // when loaded, then
@@ -172,6 +180,40 @@ class StepCountControllerTests: XCTestCase {
     XCTAssertEqual(AppModel.instance.appState, .notStarted)
   }
 
+  func testController_whenCaught_buttonLabelIsTryAgain() {
+    // given
+    givenInProgress()
+//    let exp = expectation(description: "button title change")
+//    let observer = ButtonObserver()
+//    observer.observe(sut.startButton, expectation: exp)
+    let exp = expectTestChange()
+
+    // when
+    whenCaught()
+
+    // then
+//    waitForExpectations(timeout: 1)
+    wait(for: [exp], timeout: 1.0)
+    let text = sut.startButton.title(for: .normal)
+    XCTAssertEqual(text, AppState.caught.nextStateButtonLabel)
+  }
+
+  func testController_whenComplete_buttonLabelIsStartOver() {
+    //
+    givenInProgress()
+    let exp = expectation(description: "button title change")
+    let observer = ButtonObserver()
+    observer.observe(sut.startButton, expectation: exp)
+
+    // when
+    whenCompleted()
+
+    // then
+    waitForExpectations(timeout: 1)
+    let text = sut.startButton.title(for: .normal)
+    XCTAssertEqual(text, AppState.completed.nextStateButtonLabel)
+  }
+
   // MARK: - Chase View
   func testChaseView_whenLoaded_isNotStarted() {
     // when loaded, then
@@ -186,5 +228,10 @@ class StepCountControllerTests: XCTestCase {
     // then
     let chaseView = sut.chaseView
     XCTAssertEqual(chaseView?.state, AppState.inProgress)
+  }
+
+  func expectTestChange() -> XCTestExpectation {
+    return keyValueObservingExpectation(for: sut.startButton as Any,
+                                           keyPath: "titleLabel.text")
   }
 }
